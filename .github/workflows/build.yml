@@ -37,8 +37,13 @@ jobs:
       if: runner.os == 'Windows'
       uses: ilammy/msvc-dev-cmd@v1
 
+    - name: Install Windows Dependencies (PkgConfig)
+      if: runner.os == 'Windows'
+      run: choco install pkgconfiglite
+
     # --- COMPILACIÓN ---
     # Usamos -DCMAKE_BUILD_TYPE para asegurar la configuración
+    # En Windows, añadimos el flag para ignorar errores de PkgConfig si no es crítico
     - name: Configure CMake
       run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 
@@ -50,13 +55,15 @@ jobs:
       if: runner.os == 'Windows'
       shell: pwsh
       run: |
-        New-Item -ItemType Directory -Force -Path ./publish
-        # Copiamos el ejecutable
-        Copy-Item ./build/Release/OrangyEngine.exe ./publish/
-        # Copiamos DLLs necesarias si existen en el build
-        Get-ChildItem ./build/Release/*.dll | Copy-Item -Destination ./publish/
-        # Creamos el ZIP
-        Compress-Archive -Path ./publish/* -DestinationPath ./OrangyEngine_Windows.zip
+        if (!(Test-Path ./publish)) { New-Item -ItemType Directory -Path ./publish }
+        # Copiamos el ejecutable principal
+        if (Test-Path ./build/Release/OrangyEngine.exe) { 
+          Copy-Item ./build/Release/OrangyEngine.exe ./publish/ 
+        }
+        # Buscamos y copiamos cualquier DLL que se haya generado
+        Get-ChildItem -Path ./build/Release/ -Filter *.dll -Recurse | Copy-Item -Destination ./publish/
+        # Creamos el ZIP con el ejecutable y sus librerías
+        Compress-Archive -Path ./publish/* -DestinationPath ./OrangyEngine_Windows.zip -Force
 
     - name: Upload Artifacts
       if: runner.os == 'Windows'
