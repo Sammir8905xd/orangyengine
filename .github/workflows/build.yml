@@ -1,22 +1,38 @@
-name: C++ CI
+name: OrangyEngine Auto Build
 
 on: [push, pull_request]
 
 jobs:
-  build:
+  build-linux:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout Code
+      uses: actions/checkout@v3
 
-    - name: Install Graphics Dependencies
-# Instalamos lo necesario para que OpenGL corra en los servidores de GitHub
+    - name: Install Dependencies
+      # Instalamos GLFW, OpenGL y herramientas de compilación
       run: |
         sudo apt-get update
-        sudo apt-get install -y libwayland-dev libxkbcommon-dev xorg-dev libglu1-mesa-dev libglew-dev libglfw3-dev cmake
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          libglfw3-dev \
+          libgles2-mesa-dev \
+          libx11-dev \
+          libxcursor-dev \
+          libxrandr-dev \
+          libxinerama-dev \
+          libxi-dev \
+          libxkbcommon-dev \
+          libwayland-dev
 
     - name: Configure CMake
       run: cmake -S . -B build
 
-    - name: Build
+    - name: Build Engine
       run: cmake --build build
+
+    - name: Run Smoke Test
+      # Ejecutamos el motor para verificar que no crashea
+      run: ./build/OrangyEngine
