@@ -8,7 +8,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        # Compilamos en Windows y Linux simultáneamente
         os: [windows-latest, ubuntu-latest]
 
     steps:
@@ -38,14 +37,37 @@ jobs:
       if: runner.os == 'Windows'
       uses: ilammy/msvc-dev-cmd@v1
 
-    # --- COMPILACIÓN COMÚN ---
+    # --- COMPILACIÓN ---
+    # Usamos -DCMAKE_BUILD_TYPE para asegurar la configuración
     - name: Configure CMake
-      run: cmake -S . -B build
+      run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 
     - name: Build Engine
       run: cmake --build build --config Release
 
-    # --- PRUEBA DE EJECUCIÓN (SMOKE TEST) ---
+    # --- EMPAQUETADO Y SUBIDA (SOLO WINDOWS) ---
+    - name: Prepare Windows Artifacts
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Force -Path ./publish
+        # Copiamos el ejecutable
+        Copy-Item ./build/Release/OrangyEngine.exe ./publish/
+        # Copiamos DLLs necesarias si existen en el build
+        Get-ChildItem ./build/Release/*.dll | Copy-Item -Destination ./publish/
+        # Creamos el ZIP
+        Compress-Archive -Path ./publish/* -DestinationPath ./OrangyEngine_Windows.zip
+
+    - name: Upload Artifacts
+      if: runner.os == 'Windows'
+      uses: actions/upload-artifact@v4
+      with:
+        name: OrangyEngine-Windows-Build
+        path: |
+          OrangyEngine_Windows.zip
+          ./publish/OrangyEngine.exe
+
+    # --- PRUEBA DE EJECUCIÓN ---
     - name: Run Engine Test (Linux)
       if: runner.os == 'Linux'
       run: ./build/OrangyEngine
