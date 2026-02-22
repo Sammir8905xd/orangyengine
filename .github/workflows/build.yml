@@ -1,17 +1,23 @@
-name: OrangyEngine Auto Build
+name: OrangyEngine Multi-Platform Build
 
 on: [push, pull_request]
 
 jobs:
-  build-linux:
-    runs-on: ubuntu-latest
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # Compilamos en Windows y Linux simultáneamente
+        os: [windows-latest, ubuntu-latest]
 
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3
 
-    - name: Install Dependencies
-      # Instalamos GLFW, OpenGL y herramientas de compilación
+    # --- CONFIGURACIÓN PARA LINUX ---
+    - name: Install Linux Dependencies
+      if: runner.os == 'Linux'
       run: |
         sudo apt-get update
         sudo apt-get install -y \
@@ -27,12 +33,23 @@ jobs:
           libxkbcommon-dev \
           libwayland-dev
 
+    # --- CONFIGURACIÓN PARA WINDOWS ---
+    - name: Setup MSVC (Windows)
+      if: runner.os == 'Windows'
+      uses: ilammy/msvc-dev-cmd@v1
+
+    # --- COMPILACIÓN COMÚN ---
     - name: Configure CMake
       run: cmake -S . -B build
 
     - name: Build Engine
-      run: cmake --build build
+      run: cmake --build build --config Release
 
-    - name: Run Smoke Test
-      # Ejecutamos el motor para verificar que no crashea
+    # --- PRUEBA DE EJECUCIÓN (SMOKE TEST) ---
+    - name: Run Engine Test (Linux)
+      if: runner.os == 'Linux'
       run: ./build/OrangyEngine
+
+    - name: Run Engine Test (Windows)
+      if: runner.os == 'Windows'
+      run: .\build\Release\OrangyEngine.exe
