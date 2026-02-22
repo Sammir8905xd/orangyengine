@@ -1,0 +1,22 @@
+name: C++ CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Graphics Dependencies
+# Instalamos lo necesario para que OpenGL corra en los servidores de GitHub
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libwayland-dev libxkbcommon-dev xorg-dev libglu1-mesa-dev libglew-dev libglfw3-dev cmake
+
+    - name: Configure CMake
+      run: cmake -S . -B build
+
+    - name: Build
+      run: cmake --build build
